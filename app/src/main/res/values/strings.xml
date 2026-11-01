@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gemini Quick Widget</string>
+    <string name="widget_title">Gemini Pill (Inline)</string>
+    <string name="widget_desc">Interact with Gemini directly over your home screen without opening the full app.</string>
+    <string name="whats_next">What\'s next?</string>
+</resources>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlay_outside_scrim"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="14dp">
+
+    <!-- Floating Compact Widget Card anchored near bottom/center over Home Screen -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:orientation="vertical">
+
+        <!-- Inline Answer / Quick Actions Card -->
+        <LinearLayout
+            android:id="@+id/overlay_response_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_response_card"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/overlay_status_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="✦ Gemini Inline"
+                    android:textColor="#C58AF9"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btn_api_key_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="4dp"
+                    android:text="⚙️ API Key"
+                    android:textColor="#9AA0A6"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Optional API Key Field (Hidden unless tapped) -->
+            <LinearLayout
+                android:id="@+id/api_key_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/input_api_key"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="#000000"
+                    android:hint="Paste Gemini API Key (AIza...)"
+                    android:inputType="textPassword"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#6E6E6E"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btn_save_key"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Save"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:id="@+id/overlay_response_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="3dp"
+                    android:textColor="#E3E3E3"
+                    android:textIsSelectable="true"
+                    android:textSize="14sp" />
+            </ScrollView>
+        </LinearLayout>
+
+        <!-- Active Editable Pill Bar (Matches Home Screen Widget 1:1) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="68dp"
+            android:background="@drawable/bg_gemini_pill"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="10dp">
+
+            <ImageView
+                android:id="@+id/overlay_btn_plus"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="6dp"
+                android:src="@drawable/ic_plus" />
+
+            <EditText
+                android:id="@+id/overlay_edit_input"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:hint="@string/whats_next"
+                android:imeOptions="actionSend"
+                android:inputType="textCapSentences"
+                android:paddingStart="10dp"
+                android:paddingEnd="8dp"
+                android:singleLine="true"
+                android:textColor="#E3E3E3"
+                android:textColorHint="#8E918F"
+                android:textSize="19sp" />
+
+            <ImageView
+                android:id="@+id/overlay_btn_mic"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="6dp"
+                android:padding="7dp"
+                android:src="@drawable/ic_mic" />
+
+            <FrameLayout
+                android:id="@+id/overlay_btn_send_or_live"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_live_circle">
+
+                <ImageView
+                    android:id="@+id/overlay_right_icon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_send" />
+            </FrameLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+</FrameLayout>

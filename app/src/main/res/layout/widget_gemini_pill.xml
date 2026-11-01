@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp">
+
+    <!-- Optional Inline Last Answer Preview right on the Home Screen Widget -->
+    <LinearLayout
+        android:id="@+id/widget_answer_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:background="@drawable/bg_response_card"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/widget_answer_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="4"
+            android:textColor="#E3E3E3"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/widget_btn_clear"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:text="✕"
+            android:textColor="#9AA0A6"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- The Exact Dark Pill Widget from Screenshot -->
+    <LinearLayout
+        android:id="@+id/widget_pill_root"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:background="@drawable/bg_gemini_pill"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="10dp">
+
+        <!-- Left '+' Icon -->
+        <ImageView
+            android:id="@+id/widget_btn_plus"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="Quick actions"
+            android:padding="6dp"
+            android:src="@drawable/ic_plus" />
+
+        <!-- Center "What's next?" Prompt Trigger -->
+        <TextView
+            android:id="@+id/widget_btn_prompt"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:paddingStart="10dp"
+            android:paddingEnd="8dp"
+            android:singleLine="true"
+            android:text="@string/whats_next"
+            android:textColor="#8E918F"
+            android:textSize="19sp" />
+
+        <!-- Right Microphone Button -->
+        <ImageView
+            android:id="@+id/widget_btn_mic"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:contentDescription="Voice input"
+            android:padding="7dp"
+            android:src="@drawable/ic_mic" />
+
+        <!-- Far-Right Purple Circle Waveform Button -->
+        <FrameLayout
+            android:id="@+id/widget_btn_live"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_live_circle">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:contentDescription="Gemini Live"
+                android:src="@drawable/ic_waveform" />
+        </FrameLayout>
+
+    </LinearLayout>
+</LinearLayout>
