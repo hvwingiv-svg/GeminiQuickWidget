@@ -6,15 +6,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
-import android.view.View
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONArray
@@ -29,12 +27,7 @@ import kotlin.concurrent.thread
 
 class QuickOverlayActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
-    private lateinit var responseCard: LinearLayout
-    private lateinit var responseText: TextView
-    private lateinit var statusTitle: TextView
     private lateinit var editInput: EditText
-    private lateinit var apiKeyContainer: LinearLayout
-    private lateinit var inputApiKey: EditText
     private var tts: TextToSpeech? = null
     private var isLiveVoiceMode = false
 
@@ -49,61 +42,36 @@ class QuickOverlayActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         tts = TextToSpeech(this, this)
 
         val outsideScrim = findViewById<FrameLayout>(R.id.overlay_outside_scrim)
-        responseCard = findViewById(R.id.overlay_response_card)
-        responseText = findViewById(R.id.overlay_response_text)
-        statusTitle = findViewById(R.id.overlay_status_title)
         editInput = findViewById(R.id.overlay_edit_input)
-        apiKeyContainer = findViewById(R.id.api_key_container)
-        inputApiKey = findViewById(R.id.input_api_key)
 
-        val btnPlus = findViewById<ImageView>(R.id.overlay_btn_plus)
-        val btnMic = findViewById<ImageView>(R.id.overlay_btn_mic)
-        val btnSendOrLive = findViewById<FrameLayout>(R.id.overlay_btn_send_or_live)
-        val btnApiKeyToggle = findViewById<TextView>(R.id.btn_api_key_toggle)
-        val btnSaveKey = findViewById<Button>(R.id.btn_save_key)
-
-        val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
-        inputApiKey.setText(prefs.getString(GeminiPillWidgetProvider.KEY_API_KEY, ""))
-
-        // Tap outside the floating pill to return to Home Screen immediately
-        outsideScrim.setOnClickListener { finish() }
-
-        btnApiKeyToggle.setOnClickListener {
-            apiKeyContainer.visibility =
-                if (apiKeyContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        // Tap anywhere outside to stop typing and close keyboard
+        outsideScrim.setOnClickListener {
+            stopTypingAndClose()
         }
 
-        btnSaveKey.setOnClickListener {
-            prefs.edit().putString(GeminiPillWidgetProvider.KEY_API_KEY, inputApiKey.text.toString().trim()).apply()
-            apiKeyContainer.visibility = View.GONE
-            Toast.makeText(this, "Gemini API Key saved!", Toast.LENGTH_SHORT).show()
-        }
-
-        btnPlus.setOnClickListener {
-            responseCard.visibility = View.VISIBLE
-            statusTitle.text = "✦ Quick Actions"
-            responseText.text = "• Tap the text box and type any question or calculation\n• Tap ⚙️ API Key above to connect your Gemini 2.5 Flash key\n• Tap the Mic or Purple Live icon for voice mode"
-        }
-
-        btnMic.setOnClickListener {
-            isLiveVoiceMode = false
-            startVoiceRecognition()
-        }
-
-        btnSendOrLive.setOnClickListener {
-            val q = editInput.text.toString().trim()
-            if (q.isNotEmpty()) {
-                submitPrompt(q)
-            } else {
-                isLiveVoiceMode = true
-                startVoiceRecognition()
+        // Stream every keystroke directly into the Home Screen Widget
+        editInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit()
+                    .putBoolean(GeminiPillWidgetProvider.KEY_IS_TYPING, true)
+                    .putString(GeminiPillWidgetProvider.KEY_LIVE_DRAFT, s?.toString() ?: "")
+                    .apply()
+                GeminiPillWidgetProvider.refreshAllWidgets(this@QuickOverlayActivity)
             }
-        }
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
-        editInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE) {
+        editInput.setOnEditorActionListener { _, actionId, event ->
+            val isEnter = event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN
+            if (actionId == EditorInfo.IME_ACTION_SEND || actionId == EditorInfo.IME_ACTION_DONE || isEnter) {
                 val q = editInput.text.toString().trim()
-                if (q.isNotEmpty()) submitPrompt(q)
+                if (q.isNotEmpty()) {
+                    submitPromptOrApiKey(q)
+                } else {
+                    stopTypingAndClose()
+                }
                 true
             } else {
                 false
@@ -115,15 +83,24 @@ class QuickOverlayActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        if (intent != null) handleLaunchIntent(intent)
+        if (intent != null) {
+            setIntent(intent)
+            handleLaunchIntent(intent)
+        }
     }
 
     private fun handleLaunchIntent(intent: Intent) {
+        val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
         when (intent.getStringExtra("LAUNCH_MODE")) {
-            "PLUS" -> {
-                responseCard.visibility = View.VISIBLE
-                statusTitle.text = "✦ Quick Tools & Settings"
-                responseText.text = "Type a prompt below, or tap ⚙️ API Key to paste your Gemini API key so answers stream right over your home screen."
+            "SEND_NOW" -> {
+                val draft = editInput.text.toString().trim().ifEmpty {
+                    prefs.getString(GeminiPillWidgetProvider.KEY_LIVE_DRAFT, "")?.trim() ?: ""
+                }
+                if (draft.isNotEmpty()) {
+                    submitPromptOrApiKey(draft)
+                } else {
+                    stopTypingAndClose()
+                }
             }
             "MIC" -> {
                 isLiveVoiceMode = false
@@ -131,17 +108,42 @@ class QuickOverlayActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
             "LIVE" -> {
                 isLiveVoiceMode = true
-                statusTitle.text = "✦ Gemini Live (Voice Overlay)"
                 startVoiceRecognition()
             }
             else -> {
+                // Direct in-widget typing mode: activate live cursor on the Home Screen widget and open keyboard
+                val existingDraft = prefs.getString(GeminiPillWidgetProvider.KEY_LIVE_DRAFT, "") ?: ""
+                prefs.edit()
+                    .putBoolean(GeminiPillWidgetProvider.KEY_IS_TYPING, true)
+                    .apply()
+                GeminiPillWidgetProvider.refreshAllWidgets(this)
+
+                editInput.setText(existingDraft)
+                editInput.setSelection(editInput.text.length)
                 editInput.requestFocus()
                 editInput.postDelayed({
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.showSoftInput(editInput, InputMethodManager.SHOW_IMPLICIT)
-                }, 120)
+                    imm.showSoftInput(editInput, InputMethodManager.SHOW_FORCED)
+                }, 80)
             }
         }
+    }
+
+    private fun stopTypingAndClose() {
+        val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(GeminiPillWidgetProvider.KEY_IS_TYPING, false)
+            .putString(GeminiPillWidgetProvider.KEY_LIVE_DRAFT, "")
+            .apply()
+        GeminiPillWidgetProvider.refreshAllWidgets(this)
+        hideKeyboard()
+        finish()
+        overridePendingTransition(0, 0)
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(editInput.windowToken, 0)
     }
 
     private fun startVoiceRecognition() {
@@ -154,48 +156,73 @@ class QuickOverlayActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             startActivityForResult(speechIntent, REQ_VOICE_INPUT)
         } catch (e: Exception) {
             Toast.makeText(this, "Voice input not available on this device", Toast.LENGTH_SHORT).show()
+            stopTypingAndClose()
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_VOICE_INPUT && resultCode == Activity.RESULT_OK && data != null) {
-            val matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val spoken = matches?.firstOrNull()
-            if (!spoken.isNullOrBlank()) {
-                editInput.setText(spoken)
-                submitPrompt(spoken)
+        if (requestCode == REQ_VOICE_INPUT) {
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                val matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                val spoken = matches?.firstOrNull()
+                if (!spoken.isNullOrBlank()) {
+                    submitPromptOrApiKey(spoken)
+                    return
+                }
             }
+            stopTypingAndClose()
         }
     }
 
-    private fun submitPrompt(prompt: String) {
-        editInput.setText("")
-        responseCard.visibility = View.VISIBLE
-        statusTitle.text = "✦ Thinking..."
-        responseText.text = " Asking: \"$prompt\"..."
-
+    private fun submitPromptOrApiKey(input: String) {
         val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean(GeminiPillWidgetProvider.KEY_IS_TYPING, false)
+            .putString(GeminiPillWidgetProvider.KEY_LIVE_DRAFT, "")
+            .apply()
+        hideKeyboard()
+
+        // Allow saving Gemini API key directly by typing/pasting an AIza... key into the widget
+        if (input.startsWith("AIza") && input.length >= 25 && !input.contains(" ")) {
+            prefs.edit()
+                .putString(GeminiPillWidgetProvider.KEY_API_KEY, input)
+                .putString(GeminiPillWidgetProvider.KEY_LAST_ANSWER, "✦ Gemini API Key saved! Ask anything in the widget.")
+                .apply()
+            GeminiPillWidgetProvider.refreshAllWidgets(this)
+            finish()
+            overridePendingTransition(0, 0)
+            return
+        }
+
+        prefs.edit()
+            .putString(GeminiPillWidgetProvider.KEY_LAST_ANSWER, "✦ Thinking about \"$input\"...")
+            .apply()
+        GeminiPillWidgetProvider.refreshAllWidgets(this)
+
         val apiKey = prefs.getString(GeminiPillWidgetProvider.KEY_API_KEY, "") ?: ""
+        val appContext = applicationContext
 
         thread {
             val answer = if (apiKey.length > 10) {
-                callGeminiRestApi(prompt, apiKey)
+                callGeminiRestApi(input, apiKey)
             } else {
-                "⚡ Quick Answer for \"$prompt\":\n\nTap ⚙️ API Key in the top-right of this card to paste a free Google AI Studio key (gemini-2.5-flash) for live AI responses right on your home screen."
+                "⚡ Paste your Gemini API key (starts with AIza...) directly into the widget bar and press Send to enable live Gemini 2.5 Flash answers."
             }
 
-            // Save latest answer to show directly inside the Home Screen Widget too
             prefs.edit().putString(GeminiPillWidgetProvider.KEY_LAST_ANSWER, answer).apply()
-            GeminiPillWidgetProvider.refreshAllWidgets(this)
+            GeminiPillWidgetProvider.refreshAllWidgets(appContext)
 
-            runOnUiThread {
-                statusTitle.text = if (isLiveVoiceMode) "✦ Gemini Live Reply" else "✦ Gemini Inline"
-                responseText.text = answer
-                if (isLiveVoiceMode) {
+            if (isLiveVoiceMode) {
+                runOnUiThread {
                     tts?.speak(answer.take(300), TextToSpeech.QUEUE_FLUSH, null, "gemini_live_utt")
                 }
             }
+        }
+
+        if (!isLiveVoiceMode) {
+            finish()
+            overridePendingTransition(0, 0)
         }
     }
 
@@ -235,7 +262,16 @@ class QuickOverlayActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 .getString("text")
                 .trim()
         } catch (e: Exception) {
-            "Could not reach Gemini API (${e.localizedMessage}). Check your API key under ⚙️ API Key."
+            "Could not reach Gemini API (${e.localizedMessage}). Paste a valid AIza... key into the widget."
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(GeminiPillWidgetProvider.KEY_IS_TYPING, false)) {
+            prefs.edit().putBoolean(GeminiPillWidgetProvider.KEY_IS_TYPING, false).apply()
+            GeminiPillWidgetProvider.refreshAllWidgets(this)
         }
     }
 

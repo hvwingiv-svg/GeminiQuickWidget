@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_outer_container"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
+    android:gravity="center_vertical"
     android:orientation="vertical"
-    android:padding="4dp">
+    android:padding="2dp">
 
-    <!-- Optional Inline Last Answer Preview right on the Home Screen Widget -->
+    <!-- Flexible Inline Answer Card right inside the Home Screen Widget -->
     <LinearLayout
         android:id="@+id/widget_answer_card"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="4dp"
+        android:layout_weight="1"
         android:background="@drawable/bg_response_card"
+        android:gravity="top"
+        android:minHeight="32dp"
         android:orientation="horizontal"
-        android:padding="12dp"
+        android:padding="10dp"
         android:visibility="gone">
 
         <TextView
@@ -22,76 +27,84 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ellipsize="end"
-            android:maxLines="4"
-            android:textColor="#E3E3E3"
+            android:maxLines="6"
+            android:textColor="#F1F3F4"
             android:textSize="13sp" />
 
         <TextView
             android:id="@+id/widget_btn_clear"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
             android:gravity="center"
             android:text="✕"
             android:textColor="#9AA0A6"
-            android:textSize="14sp" />
+            android:textSize="13sp" />
     </LinearLayout>
 
-    <!-- The Exact Dark Pill Widget from Screenshot -->
+    <!-- Single Adaptive Pill Widget (scales from ultra-thin 28dp to tall/wide without breaking) -->
     <LinearLayout
         android:id="@+id/widget_pill_root"
         android:layout_width="match_parent"
-        android:layout_height="68dp"
+        android:layout_height="wrap_content"
         android:background="@drawable/bg_gemini_pill"
         android:gravity="center_vertical"
+        android:minHeight="28dp"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="10dp">
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="6dp">
 
-        <!-- Left '+' Icon -->
+        <!-- Left '+' Button: Cycles Solid -> Frosted Glass -> Refractive Glass -->
         <ImageView
             android:id="@+id/widget_btn_plus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:contentDescription="Quick actions"
-            android:padding="6dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:contentDescription="Cycle visual style"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
             android:src="@drawable/ic_plus" />
 
-        <!-- Center "What's next?" Prompt Trigger -->
+        <!-- Center Direct-Type Prompt Text (mirrors keyboard input live) -->
         <TextView
             android:id="@+id/widget_btn_prompt"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:ellipsize="end"
             android:gravity="center_vertical"
-            android:paddingStart="10dp"
-            android:paddingEnd="8dp"
-            android:singleLine="true"
+            android:maxLines="2"
+            android:paddingStart="8dp"
+            android:paddingEnd="6dp"
             android:text="@string/whats_next"
-            android:textColor="#8E918F"
-            android:textSize="19sp" />
+            android:textColor="#C4C7C5"
+            android:textSize="16sp" />
 
         <!-- Right Microphone Button -->
         <ImageView
             android:id="@+id/widget_btn_mic"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="6dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="4dp"
             android:contentDescription="Voice input"
-            android:padding="7dp"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
             android:src="@drawable/ic_mic" />
 
-        <!-- Far-Right Purple Circle Waveform Button -->
+        <!-- Far-Right Action Button (Live Voice when idle, Send when typing) -->
         <FrameLayout
             android:id="@+id/widget_btn_live"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:background="@drawable/bg_live_circle">
 
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:id="@+id/widget_right_icon"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
                 android:layout_gravity="center"
-                android:contentDescription="Gemini Live"
+                android:contentDescription="Action"
+                android:scaleType="fitCenter"
                 android:src="@drawable/ic_waveform" />
         </FrameLayout>
 

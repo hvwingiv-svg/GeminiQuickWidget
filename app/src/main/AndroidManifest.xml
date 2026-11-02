@@ -10,22 +10,22 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
 
-        <!-- 1. Translucent Home-Screen Floating Overlay Activity (Does NOT open a full app window) -->
+        <!-- Invisible 1dp Keyboard Input Bridge (Streams keystrokes directly into the Home Screen Widget) -->
         <activity
             android:name=".QuickOverlayActivity"
             android:exported="true"
             android:excludeFromRecents="true"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@style/Theme.GeminiWidget.FloatingOverlay"
-            android:windowSoftInputMode="stateVisible|adjustResize">
+            android:windowSoftInputMode="stateAlwaysVisible|adjustNothing">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- 2. Native Android Home Screen AppWidgetProvider (Long-press Home Screen -> Widgets) -->
+        <!-- Native Android Home Screen AppWidgetProvider -->
         <receiver
             android:name=".GeminiPillWidgetProvider"
             android:exported="true"
@@ -33,6 +33,7 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.custom.geminiquickwidget.ACTION_CLEAR_INLINE" />
+                <action android:name="com.custom.geminiquickwidget.ACTION_CYCLE_STYLE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
