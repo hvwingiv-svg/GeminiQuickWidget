@@ -1,71 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_outer_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center_vertical"
-    android:orientation="vertical"
     android:padding="2dp">
 
-    <!-- Flexible Inline Answer Card right inside the Home Screen Widget -->
-    <LinearLayout
-        android:id="@+id/widget_answer_card"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginBottom="4dp"
-        android:layout_weight="1"
-        android:background="@drawable/bg_response_card"
-        android:gravity="top"
-        android:minHeight="32dp"
-        android:orientation="horizontal"
-        android:padding="10dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/widget_answer_text"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="6"
-            android:textColor="#F1F3F4"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/widget_btn_clear"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:gravity="center"
-            android:text="✕"
-            android:textColor="#9AA0A6"
-            android:textSize="13sp" />
-    </LinearLayout>
-
-    <!-- Single Adaptive Pill Widget (scales from ultra-thin 28dp to tall/wide without breaking) -->
+    <!-- MODE A: Clean Scalable Floating Gemini Pill with Drop Shadows -->
     <LinearLayout
         android:id="@+id/widget_pill_root"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
         android:background="@drawable/bg_gemini_pill"
+        android:elevation="8dp"
         android:gravity="center_vertical"
-        android:minHeight="28dp"
+        android:minHeight="32dp"
         android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingTop="6dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="6dp">
+        android:paddingStart="14dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="10dp">
 
-        <!-- Left '+' Button: Cycles Solid -> Frosted Glass -> Refractive Glass -->
+        <!-- Left '+' Button: Opens Floating Full Gemini '+' Menu -->
         <ImageView
             android:id="@+id/widget_btn_plus"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:contentDescription="Cycle visual style"
-            android:padding="5dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:contentDescription="Open attachment and tools menu"
+            android:padding="6dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_plus" />
 
-        <!-- Center Direct-Type Prompt Text (mirrors keyboard input live) -->
+        <!-- Center Prompt Trigger -->
         <TextView
             android:id="@+id/widget_btn_prompt"
             android:layout_width="0dp"
@@ -74,39 +40,128 @@
             android:ellipsize="end"
             android:gravity="center_vertical"
             android:maxLines="2"
-            android:paddingStart="8dp"
-            android:paddingEnd="6dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="8dp"
+            android:shadowColor="#80000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="4"
             android:text="@string/whats_next"
-            android:textColor="#C4C7C5"
-            android:textSize="16sp" />
+            android:textColor="#D6D8DA"
+            android:textSize="17sp" />
 
         <!-- Right Microphone Button -->
         <ImageView
             android:id="@+id/widget_btn_mic"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginEnd="4dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginEnd="6dp"
             android:contentDescription="Voice input"
-            android:padding="5dp"
+            android:padding="6dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_mic" />
 
-        <!-- Far-Right Action Button (Live Voice when idle, Send when typing) -->
+        <!-- Far-Right Floating Live Button with Drop Shadow -->
         <FrameLayout
             android:id="@+id/widget_btn_live"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="@drawable/bg_live_circle">
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_live_circle"
+            android:elevation="6dp">
 
             <ImageView
                 android:id="@+id/widget_right_icon"
-                android:layout_width="18dp"
-                android:layout_height="18dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:layout_gravity="center"
-                android:contentDescription="Action"
+                android:contentDescription="Gemini Live"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_waveform" />
         </FrameLayout>
-
     </LinearLayout>
-</LinearLayout>
+
+    <!-- MODE B: In-Place Gemini Live 5-Element Dock (Exact Screenshot Layout) -->
+    <LinearLayout
+        android:id="@+id/widget_live_dock_root"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="2dp"
+        android:visibility="gone">
+
+        <!-- 1. Left Video / Camera Circle Button -->
+        <FrameLayout
+            android:id="@+id/widget_live_btn_video"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_circle_button_shadow">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:contentDescription="Live Camera"
+                android:src="@drawable/ic_video_cam" />
+        </FrameLayout>
+
+        <!-- 2. Screen / Image Context Share Circle Button -->
+        <FrameLayout
+            android:id="@+id/widget_live_btn_share"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_circle_button_shadow">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:contentDescription="Share Screen or Image"
+                android:src="@drawable/ic_share_up" />
+        </FrameLayout>
+
+        <!-- 3. Center Glowing Blue-White Aurora Pill -->
+        <FrameLayout
+            android:id="@+id/widget_live_aurora_pill"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_live_aurora_pill" />
+
+        <!-- 4. Microphone / Mute Circle Button -->
+        <FrameLayout
+            android:id="@+id/widget_live_btn_mic"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_circle_button_shadow">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                android:contentDescription="Mute or Speak"
+                android:src="@drawable/ic_mic" />
+        </FrameLayout>
+
+        <!-- 5. Right Close 'X' Circle Button -->
+        <FrameLayout
+            android:id="@+id/widget_live_btn_close"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/bg_circle_button_shadow">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:contentDescription="End Gemini Live"
+                android:src="@drawable/ic_close_x" />
+        </FrameLayout>
+    </LinearLayout>
+
+</FrameLayout>

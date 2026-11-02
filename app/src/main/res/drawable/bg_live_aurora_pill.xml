@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Floating drop shadow beneath the center Gemini Live aurora pill -->
+    <item
+        android:left="1dp"
+        android:top="4dp"
+        android:right="1dp"
+        android:bottom="0dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#66000000" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <!-- Deep black top fading into luminous blue-white aurora glow at bottom -->
+    <item
+        android:left="2dp"
+        android:top="1dp"
+        android:right="2dp"
+        android:bottom="4dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#040508"
+                android:centerColor="#1E3A5F"
+                android:endColor="#BAE6FD"
+                android:type="linear" />
+            <corners android:radius="999dp" />
+            <stroke
+                android:width="1dp"
+                android:color="#4093C5FD" />
+        </shape>
+    </item>
+</layer-list>

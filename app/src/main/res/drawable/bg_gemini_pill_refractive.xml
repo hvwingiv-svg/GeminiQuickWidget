@@ -1,14 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <gradient
-        android:angle="135"
-        android:startColor="#66FFFFFF"
-        android:centerColor="#386495ED"
-        android:endColor="#66C58AF9"
-        android:type="linear" />
-    <corners android:radius="999dp" />
-    <stroke
-        android:width="1.5dp"
-        android:color="#A6FFFFFF" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Deep 3D floating ambient drop shadow -->
+    <item
+        android:left="1dp"
+        android:top="4dp"
+        android:right="1dp"
+        android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#4D000000" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <!-- Crisp key drop shadow -->
+    <item
+        android:left="2dp"
+        android:top="5dp"
+        android:right="2dp"
+        android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#73000000" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <!-- 3D Liquid Glass Chromatic Base Layer -->
+    <item
+        android:left="2dp"
+        android:top="1dp"
+        android:right="2dp"
+        android:bottom="4dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="135"
+                android:startColor="#6638BDF8"
+                android:centerColor="#401E293B"
+                android:endColor="#66C084FC"
+                android:type="linear" />
+            <corners android:radius="999dp" />
+            <stroke
+                android:width="1.5dp"
+                android:color="#B3FFFFFF" />
+        </shape>
+    </item>
+    <!-- 3D Convex Top Specular Lens Highlight -->
+    <item
+        android:left="4dp"
+        android:top="2dp"
+        android:right="4dp"
+        android:bottom="18dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:startColor="#55FFFFFF"
+                android:endColor="#00FFFFFF"
+                android:type="linear" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+</layer-list>

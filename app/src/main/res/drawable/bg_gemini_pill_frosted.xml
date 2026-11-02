@@ -1,13 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-    <gradient
-        android:angle="90"
-        android:startColor="#8C1A1C20"
-        android:endColor="#9E2A2D34"
-        android:type="linear" />
-    <corners android:radius="999dp" />
-    <stroke
-        android:width="1.5dp"
-        android:color="#4DFFFFFF" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer ambient drop shadow -->
+    <item
+        android:left="1dp"
+        android:top="3dp"
+        android:right="1dp"
+        android:bottom="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#45000000" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <!-- Mid key drop shadow -->
+    <item
+        android:left="2dp"
+        android:top="4dp"
+        android:right="2dp"
+        android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#66000000" />
+            <corners android:radius="999dp" />
+        </shape>
+    </item>
+    <!-- Frosted Glass Pill Surface -->
+    <item
+        android:left="2dp"
+        android:top="1dp"
+        android:right="2dp"
+        android:bottom="4dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:startColor="#941C1E24"
+                android:endColor="#A82C303A"
+                android:type="linear" />
+            <corners android:radius="999dp" />
+            <stroke
+                android:width="1.2dp"
+                android:color="#59FFFFFF" />
+        </shape>
+    </item>
+</layer-list>
