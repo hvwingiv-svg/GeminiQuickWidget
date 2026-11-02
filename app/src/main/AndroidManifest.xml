@@ -11,7 +11,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
 
-        <!-- Coordinate-Locked Hardware-Accelerated Floating Widget Overlay -->
+        <!-- Coordinate-Locked Hardware-Accelerated Live Widget Layer (adjustNothing keeps exact widget coordinates) -->
         <activity
             android:name=".QuickOverlayActivity"
             android:exported="true"
@@ -19,7 +19,7 @@
             android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@style/Theme.GeminiWidget.FloatingOverlay"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustNothing">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

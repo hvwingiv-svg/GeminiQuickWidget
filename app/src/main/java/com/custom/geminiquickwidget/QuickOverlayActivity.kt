@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -66,33 +67,28 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var liveBtnShare: FrameLayout
     private lateinit var liveBtnMic: FrameLayout
 
-    // Battery-optimized lazy TTS & lifecycle-gated sensor
     private var tts: TextToSpeech? = null
     private var isTtsReady = false
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null
     private var isSensorRegistered = false
 
-    // 3D Liquid Glass dynamic drawables
     private var pillLiquidDrawable: LiquidGlassDrawable? = null
     private var menuLiquidDrawable: LiquidGlassDrawable? = null
     private var cardLiquidDrawable: LiquidGlassDrawable? = null
 
-    // Multimodal attachment state (Camera / Gallery / File / Live context)
     private var attachedBase64Data: String? = null
     private var attachedMimeType: String? = null
     private var attachedLabel: String? = null
 
-    // Multi-turn conversation history
     private val conversationHistory = JSONArray()
     private var lastModelReply: String = ""
 
-    // Gemini Live state
     private var isLiveMode = false
     private var isLiveMicMuted = false
     private var isLiveCameraActive = false
+    private var isLaunchingSubPicker = false
 
-    // Battery saver: 60s inactivity auto-sleep handler
     private val idleHandler = Handler(Looper.getMainLooper())
     private val idleTimeoutRunnable = Runnable {
         if (!isFinishing) {
@@ -109,7 +105,12 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        overridePendingTransition(0, 0)
         super.onCreate(savedInstanceState)
+
+        // Immediately hide the static Home Screen RemoteViews widget so there is NEVER a clone
+        setStaticWidgetOverlayState(active = true)
+
         setContentView(R.layout.activity_quick_overlay)
 
         val density = resources.displayMetrics.density
@@ -147,7 +148,7 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             closeOverlay(keepLiveWidgetState = isLiveMode)
         }
 
-        // Wire Floating '+' Menu Buttons (Full Gemini App Menu)
+        // Wire Floating '+' Menu Buttons
         findViewById<ImageView>(R.id.overlay_btn_plus).setOnClickListener {
             resetInactivityTimer()
             floatingPlusMenu.visibility =
@@ -191,7 +192,6 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             val next = (cur + 1) % 3
             prefs.edit().putInt(GeminiPillWidgetProvider.KEY_VISUAL_STYLE, next).apply()
             applyVisualStyle()
-            GeminiPillWidgetProvider.refreshAllWidgets(this)
         }
 
         findViewById<TextView>(R.id.btn_api_key_toggle).setOnClickListener {
@@ -209,16 +209,14 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             Toast.makeText(this, "Gemini API Key saved!", Toast.LENGTH_SHORT).show()
         }
 
-        // Attachment chip remove
         findViewById<TextView>(R.id.attachment_chip_remove).setOnClickListener {
             clearAttachment()
         }
 
-        // Chat card actions (New Chat, Lazy TTS Read Aloud, Copy, Close)
         findViewById<TextView>(R.id.btn_new_chat).setOnClickListener {
             resetInactivityTimer()
-            conversationHistory.let {
-                while (it.length() > 0) it.remove(0)
+            while (conversationHistory.length() > 0) {
+                conversationHistory.remove(0)
             }
             responseText.text = ""
             responseCard.visibility = View.GONE
@@ -244,7 +242,6 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             responseCard.visibility = View.GONE
         }
 
-        // Pill bar Mic & Send/Live buttons
         findViewById<ImageView>(R.id.overlay_btn_mic).setOnClickListener {
             resetInactivityTimer()
             isLiveMode = false
@@ -274,7 +271,7 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             }
         }
 
-        // Wire Gemini Live 5-Button Dock
+        // Gemini Live 5-Button Dock handlers
         liveBtnVideo.setOnClickListener {
             resetInactivityTimer()
             isLiveCameraActive = !isLiveCameraActive
@@ -318,35 +315,72 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
 
         updateModelAndStyleLabels()
         applyVisualStyle()
-        positionAtWidgetBounds(intent)
+        positionAtExactWidgetBounds(intent)
         handleLaunchIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        overridePendingTransition(0, 0)
+        setStaticWidgetOverlayState(active = true)
         if (intent != null) {
             setIntent(intent)
-            positionAtWidgetBounds(intent)
+            positionAtExactWidgetBounds(intent)
             handleLaunchIntent(intent)
         }
     }
 
+    private fun setStaticWidgetOverlayState(active: Boolean) {
+        getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(GeminiPillWidgetProvider.KEY_OVERLAY_ACTIVE, active)
+            .apply()
+        GeminiPillWidgetProvider.refreshAllWidgets(this)
+    }
+
     /**
-     * Positions the floating bar and menus directly at the Home Screen widget's coordinates
-     * (intent.sourceBounds) so it expands in-place rather than at a disconnected location.
+     * Locks the live interactive widget to the exact screen coordinates of the Home Screen widget
+     * using Gravity.BOTTOM so opening '+' menus or chat cards above the pill never shifts the pill downward.
      */
-    private fun positionAtWidgetBounds(intent: Intent) {
-        val bounds = intent.sourceBounds
-        val params = anchorContainer.layoutParams as FrameLayout.LayoutParams
+    private fun positionAtExactWidgetBounds(intent: Intent) {
+        val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
+        val incomingBounds: Rect? = intent.sourceBounds
+
+        if (incomingBounds != null && incomingBounds.width() > 0 && incomingBounds.bottom > 0) {
+            prefs.edit()
+                .putInt(GeminiPillWidgetProvider.KEY_SAVED_BOUNDS_LEFT, incomingBounds.left)
+                .putInt(GeminiPillWidgetProvider.KEY_SAVED_BOUNDS_TOP, incomingBounds.top)
+                .putInt(GeminiPillWidgetProvider.KEY_SAVED_BOUNDS_RIGHT, incomingBounds.right)
+                .putInt(GeminiPillWidgetProvider.KEY_SAVED_BOUNDS_BOTTOM, incomingBounds.bottom)
+                .apply()
+        }
+
+        val savedBottom = prefs.getInt(GeminiPillWidgetProvider.KEY_SAVED_BOUNDS_BOTTOM, -1)
+        val savedLeft = prefs.getInt(GeminiPillWidgetProvider.KEY_SAVED_BOUNDS_LEFT, -1)
+        val savedRight = prefs.getInt(GeminiPillWidgetProvider.KEY_SAVED_BOUNDS_RIGHT, -1)
+
         val screenH = resources.displayMetrics.heightPixels
-        if (bounds != null && bounds.top > 0) {
-            params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            val targetTop = (bounds.top - (24 * resources.displayMetrics.density).toInt())
-                .coerceIn(48, (screenH * 0.68f).toInt())
-            params.topMargin = targetTop
-            params.bottomMargin = 0
+        val screenW = resources.displayMetrics.widthPixels
+        val density = resources.displayMetrics.density
+
+        val params = anchorContainer.layoutParams as FrameLayout.LayoutParams
+        params.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+
+        if (savedBottom > 0) {
+            // Keep the bottom of the pill locked to the exact bottom of the Home Screen widget
+            // (only ensuring it stays above the keyboard if the widget was placed near the bottom dock)
+            val rawBottomMargin = (screenH - savedBottom).coerceAtLeast((16 * density).toInt())
+            params.bottomMargin = rawBottomMargin
+            params.topMargin = 0
+
+            // Match horizontal margins of the widget on the Home Screen if valid
+            if (savedLeft >= 0 && savedRight > savedLeft && (savedRight - savedLeft) >= (140 * density).toInt()) {
+                val hPad = ((screenW - (savedRight - savedLeft)) / 2).coerceAtLeast((8 * density).toInt())
+                anchorContainer.setPadding(hPad, 0, hPad, 0)
+            }
         } else {
-            params.gravity = Gravity.CENTER_VERTICAL or Gravity.CENTER_HORIZONTAL
+            // Fallback to middle of home screen if launched from app drawer icon
+            params.bottomMargin = (screenH * 0.44f).toInt()
             params.topMargin = 0
         }
         anchorContainer.layoutParams = params
@@ -384,7 +418,7 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
                 editInput.postDelayed({
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     imm.showSoftInput(editInput, InputMethodManager.SHOW_IMPLICIT)
-                }, 90)
+                }, 80)
             }
         }
     }
@@ -404,12 +438,10 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
         auroraVisualizer.setRunning(true)
         auroraVisualizer.setVoiceActive(true)
 
-        // Synchronize the Home Screen widget so it morphs in-place into the 5-button Live dock
         getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(GeminiPillWidgetProvider.KEY_LIVE_MODE_ACTIVE, true)
             .apply()
-        GeminiPillWidgetProvider.refreshAllWidgets(this)
 
         hideKeyboard()
         if (startVoiceImmediately && !isLiveMicMuted) {
@@ -427,7 +459,6 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             .edit()
             .putBoolean(GeminiPillWidgetProvider.KEY_LIVE_MODE_ACTIVE, false)
             .apply()
-        GeminiPillWidgetProvider.refreshAllWidgets(this)
 
         closeOverlay(keepLiveWidgetState = false)
     }
@@ -458,7 +489,6 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
         )
         updateModelAndStyleLabels()
 
-        // Real-time background blur behind the floating widget on Android 12+ for Frosted & 3D Liquid Glass
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (style == GeminiPillWidgetProvider.STYLE_REFRACTIVE || style == GeminiPillWidgetProvider.STYLE_FROSTED) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
@@ -516,32 +546,38 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
 
     private fun launchCameraCapture() {
         try {
+            isLaunchingSubPicker = true
             val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
             startActivityForResult(intent, REQ_CAMERA_PHOTO)
         } catch (e: Exception) {
+            isLaunchingSubPicker = false
             Toast.makeText(this, "Camera unavailable", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun launchGalleryPicker() {
         try {
+            isLaunchingSubPicker = true
             val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                 type = "image/*"
             }
             startActivityForResult(Intent.createChooser(intent, "Select Image"), REQ_PICK_GALLERY)
         } catch (e: Exception) {
+            isLaunchingSubPicker = false
             Toast.makeText(this, "Gallery unavailable", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun launchFilePicker() {
         try {
+            isLaunchingSubPicker = true
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
             }
             startActivityForResult(intent, REQ_PICK_FILE)
         } catch (e: Exception) {
+            isLaunchingSubPicker = false
             Toast.makeText(this, "File picker unavailable", Toast.LENGTH_SHORT).show()
         }
     }
@@ -582,6 +618,7 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
 
     private fun startVoiceRecognition() {
         try {
+            isLaunchingSubPicker = true
             auroraVisualizer.setVoiceActive(true)
             val speechIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -593,12 +630,15 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             }
             startActivityForResult(speechIntent, REQ_VOICE_INPUT)
         } catch (e: Exception) {
+            isLaunchingSubPicker = false
             Toast.makeText(this, "Voice input unavailable on this device", Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        isLaunchingSubPicker = false
+        setStaticWidgetOverlayState(active = true)
         resetInactivityTimer()
         if (resultCode != Activity.RESULT_OK || data == null) {
             auroraVisualizer.setVoiceActive(false)
@@ -672,7 +712,6 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
 
         val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
 
-        // Direct API key save shortcut if user pastes AIza... key
         if (prompt.startsWith("AIza") && prompt.length >= 25 && !prompt.contains(" ")) {
             prefs.edit().putString(GeminiPillWidgetProvider.KEY_API_KEY, prompt).apply()
             responseCard.visibility = View.VISIBLE
@@ -748,7 +787,6 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
             }
             conversationHistory.put(userTurn)
 
-            // Keep last 8 turns to prevent token bloat
             while (conversationHistory.length() > 8) {
                 conversationHistory.remove(0)
             }
@@ -784,9 +822,6 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    /**
-     * Battery Optimization: Lazy-initializes TextToSpeech ONLY when spoken output is requested.
-     */
     private fun speakWithLazyTts(text: String) {
         if (tts == null) {
             tts = TextToSpeech(applicationContext) { status ->
@@ -815,13 +850,12 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
         idleHandler.removeCallbacks(idleTimeoutRunnable)
         auroraVisualizer.setRunning(false)
         updateSensorRegistration(shouldRegister = false)
-        if (!keepLiveWidgetState) {
-            getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean(GeminiPillWidgetProvider.KEY_LIVE_MODE_ACTIVE, false)
-                .apply()
-            GeminiPillWidgetProvider.refreshAllWidgets(this)
-        }
+        getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(GeminiPillWidgetProvider.KEY_OVERLAY_ACTIVE, false)
+            .putBoolean(GeminiPillWidgetProvider.KEY_LIVE_MODE_ACTIVE, keepLiveWidgetState)
+            .apply()
+        GeminiPillWidgetProvider.refreshAllWidgets(this)
         hideKeyboard()
         finish()
         overridePendingTransition(0, 0)
@@ -829,6 +863,7 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
+        setStaticWidgetOverlayState(active = true)
         resetInactivityTimer()
         val prefs = getSharedPreferences(GeminiPillWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE)
         val style = prefs.getInt(
@@ -844,17 +879,27 @@ class QuickOverlayActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onPause() {
-        // Strict battery optimization: immediately unregister sensors and pause animators on background/screen-off
         updateSensorRegistration(shouldRegister = false)
         auroraVisualizer.setRunning(false)
         idleHandler.removeCallbacks(idleTimeoutRunnable)
+        if (!isLaunchingSubPicker) {
+            setStaticWidgetOverlayState(active = false)
+        }
         super.onPause()
+    }
+
+    override fun onStop() {
+        if (!isLaunchingSubPicker) {
+            setStaticWidgetOverlayState(active = false)
+        }
+        super.onStop()
     }
 
     override fun onDestroy() {
         idleHandler.removeCallbacks(idleTimeoutRunnable)
         updateSensorRegistration(shouldRegister = false)
         auroraVisualizer.setRunning(false)
+        setStaticWidgetOverlayState(active = false)
         tts?.stop()
         tts?.shutdown()
         tts = null

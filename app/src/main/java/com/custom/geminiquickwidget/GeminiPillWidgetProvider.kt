@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
@@ -13,9 +14,8 @@ import android.widget.RemoteViews
 
 /**
  * Zero-Idle-Drain Home Screen Widget Provider (updatePeriodMillis = 0).
- * Never runs background polling or timers. Supports dynamic extreme resizing,
- * 3 visual aesthetics with multi-layer drop shadows, and in-place morphing
- * into the 5-button Gemini Live dock.
+ * Hides the static launcher representation whenever the live interactive layer is active
+ * so there is only ever ONE widget on screen.
  */
 class GeminiPillWidgetProvider : AppWidgetProvider() {
 
@@ -45,6 +45,7 @@ class GeminiPillWidgetProvider : AppWidgetProvider() {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean(KEY_LIVE_MODE_ACTIVE, false)
+                .putBoolean(KEY_OVERLAY_ACTIVE, false)
                 .apply()
             refreshAllWidgets(context)
         }
@@ -56,6 +57,12 @@ class GeminiPillWidgetProvider : AppWidgetProvider() {
         const val KEY_VISUAL_STYLE = "visual_style_mode"
         const val KEY_MODEL_NAME = "selected_gemini_model"
         const val KEY_LIVE_MODE_ACTIVE = "is_gemini_live_dock_active"
+        const val KEY_OVERLAY_ACTIVE = "is_live_overlay_currently_open"
+
+        const val KEY_SAVED_BOUNDS_LEFT = "saved_bounds_left"
+        const val KEY_SAVED_BOUNDS_TOP = "saved_bounds_top"
+        const val KEY_SAVED_BOUNDS_RIGHT = "saved_bounds_right"
+        const val KEY_SAVED_BOUNDS_BOTTOM = "saved_bounds_bottom"
 
         const val STYLE_SOLID = 0
         const val STYLE_FROSTED = 1
@@ -79,14 +86,22 @@ class GeminiPillWidgetProvider : AppWidgetProvider() {
 
         private fun buildOverlayIntent(context: Context, mode: String, reqCode: Int): PendingIntent {
             val intent = Intent(context, QuickOverlayActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                component = ComponentName(context, QuickOverlayActivity::class.java)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NO_ANIMATION
                 putExtra("LAUNCH_MODE", mode)
+            }
+            // FLAG_MUTABLE on explicit internal component Intent allows Android Launchers
+            // to populate intent.sourceBounds with the exact on-screen Rect of the widget.
+            val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                PendingIntent.FLAG_MUTABLE
+            } else {
+                0
             }
             return PendingIntent.getActivity(
                 context,
                 reqCode,
                 intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag
             )
         }
 
@@ -110,6 +125,17 @@ class GeminiPillWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_gemini_pill)
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+            val isOverlayOpen = prefs.getBoolean(KEY_OVERLAY_ACTIVE, false)
+            if (isOverlayOpen) {
+                // Hide the static launcher image completely while the live interactive widget is active
+                // so there are NEVER two widgets on screen at the same time.
+                views.setViewVisibility(R.id.widget_outer_container, View.INVISIBLE)
+                appWidgetManager.updateAppWidget(appWidgetId, views)
+                return
+            }
+
+            views.setViewVisibility(R.id.widget_outer_container, View.VISIBLE)
+
             val isLiveDock = prefs.getBoolean(KEY_LIVE_MODE_ACTIVE, false)
             val style = prefs.getInt(KEY_VISUAL_STYLE, STYLE_REFRACTIVE)
 
@@ -118,11 +144,9 @@ class GeminiPillWidgetProvider : AppWidgetProvider() {
             val minH = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 60)
 
             if (isLiveDock) {
-                // In-Place Gemini Live 5-Button Dock Mode
                 views.setViewVisibility(R.id.widget_pill_root, View.GONE)
                 views.setViewVisibility(R.id.widget_live_dock_root, View.VISIBLE)
 
-                // Dynamic width adaptation for narrow widgets in Live mode
                 if (minW < 150) {
                     views.setViewVisibility(R.id.widget_live_btn_video, View.GONE)
                     views.setViewVisibility(R.id.widget_live_btn_share, View.GONE)
@@ -155,7 +179,6 @@ class GeminiPillWidgetProvider : AppWidgetProvider() {
                     buildBroadcastIntent(context, ACTION_EXIT_LIVE, 205)
                 )
             } else {
-                // Clean Standard Floating Pill Mode (No unwanted box above the pill)
                 views.setViewVisibility(R.id.widget_live_dock_root, View.GONE)
                 views.setViewVisibility(R.id.widget_pill_root, View.VISIBLE)
 
@@ -166,7 +189,6 @@ class GeminiPillWidgetProvider : AppWidgetProvider() {
                 }
                 views.setInt(R.id.widget_pill_root, "setBackgroundResource", pillBg)
 
-                // Dynamic extreme resize scaling (40dp x 28dp micro strip to full screen)
                 when {
                     minW < 105 -> {
                         views.setViewVisibility(R.id.widget_btn_plus, View.GONE)
